@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 # 1. Создаём базовый класс
 Base = declarative_base()
@@ -16,7 +16,15 @@ class User(Base):
 # 3. Создаём движок SQLite (файл создастся в корне)
 engine = create_engine('sqlite:///db.db')
 
-# 4. Создаём таблицы в БД
-Base.metadata.create_all(engine)
+async def create_user(tg_id,first_name):
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    new_user = User(tg_id=tg_id, first_name=first_name)
+    session.add(new_user)
+    session.commit()
 
-print("База данных и таблица созданы!")
+#
+# # 4. Создаём таблицы в БД
+# Base.metadata.create_all(engine)
+#
+# print("База данных и таблица созданы!")
