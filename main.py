@@ -1,15 +1,14 @@
 import asyncio
 import logging
-from aiogram import Bot, Dispatcher, types
+from aiogram import Dispatcher, types, Bot
 from handlers import router
-
-
+from bot import bot
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
 # Объект бота
-bot = Bot(token="8096513053:AAFBJCm5NR91df5eaK_jv1W6Kb_SwOTLxTY")
-dp = Dispatcher()
 
+dp = Dispatcher()
+# bot = Bot(token="8096513053:AAFBJCm5NR91df5eaK_jv1W6Kb_SwOTLxTY")
 
 
 async def main():

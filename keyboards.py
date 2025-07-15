@@ -6,6 +6,6 @@ accept = InlineKeyboardMarkup(inline_keyboard=[
     ])
 
 buy_sell_kb = ReplyKeyboardMarkup( keyboard=[
-    [KeyboardButton(text="купить")],[KeyboardButton(text="продать")]],
+    [KeyboardButton(text="Придбати")],[KeyboardButton(text="Продати")]],
     resize_keyboard=True, one_time_keyboard=True)
 

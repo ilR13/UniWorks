@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, func, select
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, func, select, BigInteger
 from sqlalchemy.orm import declarative_base, sessionmaker
 import asyncio
 # 1. Создаём базовый класс
@@ -9,7 +9,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    tg_id = Column(Integer, unique=True, nullable=False)
+    tg_id = Column(BigInteger, unique=True, nullable=False)
     first_name = Column(String)
     last_name = Column(String)
     accepted_terms = Column(Boolean, default=False)
