@@ -1,4 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, func, select, BigInteger
+import uuid
+
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, func, select, BigInteger, ForeignKey, \
+    Float
 from sqlalchemy.orm import declarative_base, sessionmaker
 import asyncio
 # 1. Создаём базовый класс
@@ -14,6 +17,29 @@ class User(Base):
     last_name = Column(String)
     accepted_terms = Column(Boolean, default=False)
     registered_at = Column(DateTime, server_default=func.now())
+
+class Works(Base):
+    __tablename__ = "works"
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    faculty = Column(String)
+    speciality = Column(String)
+    discipline = Column(String)
+    title_work = Column(String)
+    task = Column(String)
+    mark = Column(String)
+    listing_price_uah = Column(Float)
+    price_with_fee_uah = Column(Float)
+    uuid_watermark = Column(String, default=None)
+    ssdeep_hash = Column(String, default=None)
+    created_at = Column(DateTime, server_default=func.now())
+    status = Column(String)
+    file1 = Column(String)
+    file2 = Column(String)
+    file3 = Column(String)
+    file4 = Column(String)
+    file5 = Column(String)
+
 
 # 3. Создаём движок SQLite (файл создастся в корне)
 engine = create_engine('sqlite:///db.db',
@@ -48,10 +74,51 @@ async def accepted_terms(tg_id):
         if len(res) != 0:
             Session = sessionmaker(bind=engine)
             session = Session()
-            user = session.query(User).get(res[0])
+            # user = session.query(User).get(res[0])
+            user = session.query(User).filter_by(tg_id=tg_id).first()
             user.accepted_terms = True
             session.commit()
 
+def create_empty_work(user_id):
+    with engine.connect() as conn:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        new_work = Works(owner_id=user_id)
+        session.add(new_work)
+        session.commit()
+
+# переписать коннект к бд для автозакрытия сессии
+def create_work(user_id, faculty, speciality, discipline, title_work,
+                task, mark, listing_price_uah, price_with_fee,
+                file1 = None, file2 = None, file3 = None, file4 = None, file5 = None):
+    # with engine.connect() as conn:
+    #     query = select(Works).where(Works.owner_id==user_id)
+    #     res = conn.execute(query).first()
+    #
+    #
+    #     if len(res) != 0:
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            work = session.query(Works).filter_by(owner_id=user_id).all()[-1]
+            work.task = task
+            work.mark = mark
+            work.faculty = faculty
+            work.speciality = speciality
+            work.discipline = discipline
+            work.title_work = title_work
+            work.task = task
+            work.listing_price_uah = listing_price_uah
+            work.price_with_fee = price_with_fee
+            work.file1 = file1
+            work.file2 = file2
+            work.file3 = file3
+            work.file4 = file4
+            work.file5 = file5
+
+            session.commit()
+
+def get_work_id():
+    pass
 # # 4. Создаём таблицы в БД
 # Base.metadata.create_all(engine)
 #

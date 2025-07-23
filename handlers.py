@@ -3,11 +3,11 @@ from symtable import Class
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram import Router, F
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.fsm.context import FSMContext
 import keyboards as kb
 from bot import bot
-
+from db import create_empty_work, create_work
 
 
 from db import create_user, accept_terms, accepted_terms
@@ -34,7 +34,7 @@ class Sell (StatesGroup):
     Discipline = State()
     Title_work = State()
     Task = State()
-    grade = State()
+    Mark = State()
     Price = State()
     file1 = State()
     file2 = State()
@@ -69,24 +69,41 @@ async def sell_work4(message: Message, state: FSMContext):
 @router.message(Sell.Task)
 async def sell_work5(message: Message, state: FSMContext):
     await state.update_data(Task=message.text)
+    await state.set_state(Sell.Mark)
+    await message.answer("Вкажіть оцінку")
+
+@router.message(Sell.Mark)
+async def sell_work6(message: Message, state: FSMContext):
+    await state.update_data(Mark=message.text)
     await state.set_state(Sell.Price)
     await message.answer("Вкажіть ціну")
 
+
 @router.message(Sell.Price)
+# @router.message(F.text == "/test")
 async def sell_work6(message: Message, state: FSMContext):
     await state.update_data(Price=message.text)
     await state.set_state(Sell.file1)
     await message.answer("Надішліть файл з роботою")
 
+
 @router.message(Sell.file1)
 async def sell_work7(message: Message, state: FSMContext):
     document = message.document
-    file_id = message.document.file_id
-    file = await bot.get_file(file_id)
-    file_path = file.file_path
-    print(file_path)
-    print(type(file_path))
-    await bot.download_file(file_path, document.file_name)
+    if document != None:
+        await state.set_state(Sell.file2)
+        file_id = message.document.file_id
+
+        create_empty_work(message.from_user.id)
+
+        file = await bot.get_file(file_id)
+        file_path = file.file_path
+        data = await state.get_data()
+        # print(data.get("Faculty"))
+        create_work(message.from_user.id, data.get("Faculty"), data.get("Specialty"), data.get("Title_work"), data.get("Task"), data.get("Mark"),
+                    data.get("Price"), data.get("file1"), data.get("file2"), data.get("file3"), data.get("file4"), data.get("file5"))
+        await bot.download_file(file_path, "user_works/"+document.file_name)
+
 
 
 
