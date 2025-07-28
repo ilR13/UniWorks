@@ -9,3 +9,6 @@ buy_sell_kb = ReplyKeyboardMarkup( keyboard=[
     [KeyboardButton(text="Придбати")],[KeyboardButton(text="Продати")]],
     resize_keyboard=True, one_time_keyboard=True)
 
+files_end_kb = ReplyKeyboardMarkup( keyboard=[
+    [KeyboardButton(text="Завершити")]],
+    resize_keyboard=True, one_time_keyboard=True)

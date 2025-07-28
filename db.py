@@ -39,6 +39,11 @@ class Works(Base):
     file3 = Column(String)
     file4 = Column(String)
     file5 = Column(String)
+    file6 = Column(String)
+    file7 = Column(String)
+    file8 = Column(String)
+    file9 = Column(String)
+    file10 = Column(String)
 
 
 # 3. Создаём движок SQLite (файл создастся в корне)
@@ -47,11 +52,11 @@ engine = create_engine('sqlite:///db.db',
                        )
 
 async def create_user(tg_id,first_name,last_name):
-    with engine.connect() as conn:
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
         query = select(User).where(User.tg_id==tg_id)
-        if len(conn.execute(query).all()) == 0:
-            Session = sessionmaker(bind=engine)
-            session = Session()
+        if len(session.execute(query).all()) == 0:
+
             new_user = User(tg_id=tg_id, first_name=first_name, last_name=last_name)
             session.add(new_user)
             session.commit()
@@ -60,29 +65,30 @@ async def create_user(tg_id,first_name,last_name):
         #     return "Вы уже зарегистрированы"
 
 async def accept_terms(tg_id):
-    with engine.connect() as conn:
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
         query = select(User).where((User.tg_id==tg_id) & (User.accepted_terms==True))
-        if len(conn.execute(query).all()) != 0:
+        if len(session.execute(query).all()) != 0:
             return True
         else:
             return False
 
 async def accepted_terms(tg_id):
-    with engine.connect() as conn:
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
         query = select(User).where(User.tg_id==tg_id)
-        res = conn.execute(query).first()
+        res = session.execute(query).first()
         if len(res) != 0:
-            Session = sessionmaker(bind=engine)
-            session = Session()
+
             # user = session.query(User).get(res[0])
             user = session.query(User).filter_by(tg_id=tg_id).first()
             user.accepted_terms = True
             session.commit()
 
 def create_empty_work(user_id):
-    with engine.connect() as conn:
-        Session = sessionmaker(bind=engine)
-        session = Session()
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
+
         new_work = Works(owner_id=user_id)
         session.add(new_work)
         session.commit()
@@ -90,15 +96,15 @@ def create_empty_work(user_id):
 # переписать коннект к бд для автозакрытия сессии
 def create_work(user_id, faculty, speciality, discipline, title_work,
                 task, mark, listing_price_uah, price_with_fee,
-                file1 = None, file2 = None, file3 = None, file4 = None, file5 = None):
-    # with engine.connect() as conn:
-    #     query = select(Works).where(Works.owner_id==user_id)
-    #     res = conn.execute(query).first()
-    #
-    #
-    #     if len(res) != 0:
-            Session = sessionmaker(bind=engine)
-            session = Session()
+                file1 = None, file2 = None, file3 = None, file4 = None, file5 = None, file6 = None,file7 = None,file8 = None,file9 = None,file10 = None,):
+
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
+        query = select(Works).where(Works.owner_id==user_id)
+        res = session.execute(query).first()
+
+
+        if len(res) != 0:
             work = session.query(Works).filter_by(owner_id=user_id).all()[-1]
             work.task = task
             work.mark = mark
@@ -108,17 +114,27 @@ def create_work(user_id, faculty, speciality, discipline, title_work,
             work.title_work = title_work
             work.task = task
             work.listing_price_uah = listing_price_uah
-            work.price_with_fee = price_with_fee
+            work.price_with_fee_uah = price_with_fee
             work.file1 = file1
-            work.file2 = file2
-            work.file3 = file3
-            work.file4 = file4
-            work.file5 = file5
+            # work.file2 = file2
+            # work.file3 = file3
+            # work.file4 = file4
+            # work.file5 = file5
+            # work.file6 = file6
+            # work.file7 = file7
+            # work.file8 = file8
+            # work.file9 = file9
+            # work.file10 = file10
+
 
             session.commit()
 
-def get_work_id():
-    pass
+def get_work_id(user_id):
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
+        work = session.query(Works).filter_by(owner_id=user_id).all()[-1]
+        return work.id
+
 # # 4. Создаём таблицы в БД
 # Base.metadata.create_all(engine)
 #
