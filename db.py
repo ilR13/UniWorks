@@ -1,5 +1,6 @@
 import uuid
 import ssdeep
+import imagehash
 
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, func, select, BigInteger, ForeignKey, \
     Float
@@ -30,32 +31,42 @@ class Works(Base):
     task = Column(String)
     mark = Column(String)
     listing_price_uah = Column(Float)
-    price_with_fee_uah = Column(Float)
+    price_with_free_uah = Column(Float)
     uuid_watermark = Column(String, default=None)
     # ssdeep_hash = Column(String, default=None)
     created_at = Column(DateTime, server_default=func.now())
     status = Column(String)
-    file1 = Column(String)
-    file1_hash = Column(String)
-    file2 = Column(String)
-    file2_hash = Column(String)
-    file3 = Column(String)
-    file3_hash = Column(String)
-    file4 = Column(String)
-    file4_hash = Column(String)
-    file5 = Column(String)
-    file5_hash = Column(String)
-    file6 = Column(String)
-    file6_hash = Column(String)
-    file7 = Column(String)
-    file7_hash = Column(String)
-    file8 = Column(String)
-    file8_hash = Column(String)
-    file9 = Column(String)
-    file9_hash = Column(String)
-    file10 = Column(String)
-    file10_hash = Column(String)
+    # file1 = Column(String)
+    # file1_hash = Column(String)
+    # file2 = Column(String)
+    # file2_hash = Column(String)
+    # file3 = Column(String)
+    # file3_hash = Column(String)
+    # file4 = Column(String)
+    # file4_hash = Column(String)
+    # file5 = Column(String)
+    # file5_hash = Column(String)
+    # file6 = Column(String)
+    # file6_hash = Column(String)
+    # file7 = Column(String)
+    # file7_hash = Column(String)
+    # file8 = Column(String)
+    # file8_hash = Column(String)
+    # file9 = Column(String)
+    # file9_hash = Column(String)
+    # file10 = Column(String)
+    # file10_hash = Column(String)
 
+class Files(Base):
+    __tablename__ = "files"
+    id = Column(Integer, primary_key=True)
+    work_id = Column(Integer, ForeignKey("works.id"))
+    created_at = Column(DateTime, server_default=func.now())
+    file_type = Column(String)
+    status = Column(String)
+    file = Column(String)
+    file_hash = Column(String)
+    
 
 # 3. Создаём движок SQLite (файл создастся в корне)
 engine = create_engine('sqlite:///db.db',
@@ -104,10 +115,9 @@ def create_empty_work(user_id):
         session.add(new_work)
         session.commit()
 
+
 def create_work(user_id, faculty, speciality, discipline, title_work,
-                task, mark, listing_price_uah, price_with_fee,
-                file1 = None, file1_hash = None, file2 = None, file3 = None, file4 = None,
-                file5 = None, file6 = None,file7 = None,file8 = None,file9 = None,file10 = None ):
+                task, mark, listing_price_uah, price_with_fee ):
 
     Session = sessionmaker(bind=engine)
     with Session() as session:
@@ -125,9 +135,10 @@ def create_work(user_id, faculty, speciality, discipline, title_work,
             work.title_work = title_work
             work.task = task
             work.listing_price_uah = listing_price_uah
-            work.price_with_fee_uah = price_with_fee
-            work.file1 = file1
-            work.uuid_watermark = file1_hash
+            work.price_with_free_uah = price_with_fee
+            # work.file1 = file1
+            # work.uuid_watermark = file1_hash
+
             # work.file2 = file2
             # work.file3 = file3
             # work.file4 = file4
@@ -146,34 +157,65 @@ def get_work_id(user_id):
     with Session() as session:
         work = session.query(Works).filter_by(owner_id=user_id).all()[-1]
         return work.id
+    
 
 def check_hash_file(hash1):
     Session = sessionmaker(bind=engine)
-    res = None
+    res = True
     with Session() as session:
-        work1 = session.query(Works.file1_hash).all()
-        work2 = session.query(Works.file2_hash).all()
-        work3 = session.query(Works.file3_hash).all()
-        work4 = session.query(Works.file4_hash).all()
-        work5 = session.query(Works.file5_hash).all()
-        work6 = session.query(Works.file6_hash).all()
-        work7 = session.query(Works.file7_hash).all()
-        work8 = session.query(Works.file8_hash).all()
-        work9 = session.query(Works.file9_hash).all()
-        work10 = session.query(Works.file10_hash).all()
-        for hash2 in work1+work2+work3+work4+work5+work6+work7+work8+work9+work10:
+        file = session.query(Files.file_hash).filter_by(file_type="document")
+        
+        for hash2 in file:
             if hash2[0] != None:
                 if ssdeep.compare(hash1, hash2[0]) < 10:
                     res = True
                 else:
                     return False
-            
-def delete_work(user_id):
+    return res
+
+
+def check_image_hash(hash1):
+    hash1 = imagehash.hex_to_hash(hash1)
+    Session = sessionmaker(bind = engine)
+    res = True
+    with Session() as session:
+        file = session.query(Files.file_hash).filter_by(file_type="image")
+        
+        for hash2 in file:
+
+            if hash2[0] != None:
     
+               
+                if hash1 - imagehash.hex_to_hash(hash2[0]) > 5:
+                    res = True
+                else:
+                    return False
+    return res
+    
+
+def delete_work(user_id):
+    work_id = get_work_id(user_id)
     Session = sessionmaker(bind=engine)
     with Session() as session:
         work = session.query(Works).filter_by(owner_id=user_id).all()[-1]
         session.delete(work)
+        files =  session.query(Files).filter_by(work_id=work_id).all()
+        for file in files:
+            session.delete(file)
+        #print(files)
+        session.commit()
+
+def test():
+    return(Works)
+
+
+
+def add_file(user_id, file, file_type, hash):
+    work_id = get_work_id(user_id)
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
+        new_file = Files( work_id= work_id, file= file, file_type= file_type, file_hash = hash)
+        session.add(new_file)
         
         session.commit()
 

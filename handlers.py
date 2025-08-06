@@ -10,7 +10,7 @@ from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.fsm.context import FSMContext
 import keyboards as kb
 from bot import bot
-from db import create_empty_work, create_work, get_work_id, check_hash_file, delete_work
+from db import create_empty_work, create_work, get_work_id, check_hash_file, delete_work,check_image_hash, add_file, test
 import os
 
 from db import create_user, accept_terms, accepted_terms
@@ -101,7 +101,7 @@ async def sell_work7(message: Message, state: FSMContext):
 
 
 @router.message(Sell.listing_price)
-#@router.message(F.text == "/test")
+# @router.message(F.text == "/test")
 async def sell_work8(message: Message, state: FSMContext):
     await state.update_data(listing_price=message.text)
     await state.set_state(Sell.file1)
@@ -120,34 +120,41 @@ async def sell_work9(message: Message, state: FSMContext):
         file = await bot.get_file(file_id)
         file_path = file.file_path
         data = await state.get_data()
-        get_work_id(user_id)
+        # get_work_id(user_id)
 
         folder_path = "user_works/" + str(user_id)+"/"+str(get_work_id(user_id)) + "/"
         os.makedirs(folder_path, exist_ok=True)
-        file1 = folder_path+'prepreview.jpg'
+        file = folder_path+'preview.jpg'
         
         listing_price = data.get("listing_price")
         price_with_free = round(float(listing_price) * 1.1, 2)
 
-        # listing_price = 2
-        # price_with_free = 2
-        await bot.download_file(file_path, file1)
-        image = Image.open(file1)
+        await bot.download_file(file_path, file)
+        image = Image.open(file)
         hash = imagehash.phash(image)
-        print(hash)
-        print(type(hash))
-        print(" ")
-        print(" ")
-        print(" ")
-        print(" ")
+        hash = str(hash)
         
-        create_work(user_id, data.get("Faculty"), data.get("Specialty"), data.get("Discipline"), data.get("Title_work"), data.get("Task"), data.get("Mark"),
-                        listing_price, price_with_free, file1, hash )
+        #переделать
+        if check_image_hash(hash):
+            print("Фото прийнято")
+        
+            create_work(user_id, data.get("Faculty"), data.get("Specialty"), data.get("Discipline"), data.get("Title_work"), data.get("Task"), data.get("Mark"),
+                            listing_price, price_with_free)
             
-        #await state.set_state(Sell.file2)
+            add_file(user_id, file, "image", hash)
+                
+            await state.set_state(Sell.file2)
 
-        await message.answer('надішліть наступний файл')
+            await message.answer('надішліть наступний файл')
+        else:
 
+            await state.clear()
+            await message.answer("Таке фото вже існує, спробуйте знову", reply_markup=kb.buy_sell_kb)
+            
+            delete_work(user_id)
+            
+            shutil.rmtree(folder_path)
+        
     else:
         await message.answer("Ви не надіслали жодного файлу або надіслали групу, потрібно відправляти по 1 файлу, спробуйте знову відправити фото")
 
@@ -157,7 +164,7 @@ async def sell_work10(message: Message, state: FSMContext):
     if document != None and not(message.media_group_id):
         file_id = message.document.file_id        
         user_id = message.from_user.id
-        create_empty_work(user_id)
+        #create_empty_work(user_id)
 
         file = await bot.get_file(file_id)
         file_path = file.file_path
@@ -166,20 +173,22 @@ async def sell_work10(message: Message, state: FSMContext):
 
         folder_path = "user_works/" + str(user_id)+"/"+str(get_work_id(user_id)) + "/"
         os.makedirs(folder_path, exist_ok=True)
-        file1 = folder_path+document.file_name
+        file = folder_path+document.file_name
         
-        listing_price = data.get("listing_price")
-        price_with_fee = round(float(listing_price) * 1.1, 2)
+        #listing_price = data.get("listing_price")
+        #price_with_fee = round(float(listing_price) * 1.1, 2)
         
-        await bot.download_file(file_path, file1)
-        hash = await compute_ssdeep_hash(file1)
+        await bot.download_file(file_path, file)
+        hash = await compute_ssdeep_hash(file)
+
         if check_hash_file(hash):
-            print("Робуту прийнято")
+            print("Файл прийнято")
         
-            create_work(user_id, data.get("Faculty"), data.get("Specialty"), data.get("Discipline"), data.get("Title_work"), data.get("Task"), data.get("Mark"),
-                        listing_price, price_with_fee, file1, hash )
+            #create_work(user_id, data.get("Faculty"), data.get("Specialty"), data.get("Discipline"), data.get("Title_work"), data.get("Task"), data.get("Mark"),listing_price, price_with_fee, file1, hash )
             
-            await state.set_state(Sell.file3)
+            add_file(user_id, file, "document", hash)
+
+            # await state.set_state(Sell.file3)
 
             await message.answer('надішліть наступний файл або натисніть кнопку завершити', reply_markup=kb.files_end_kb)
 
@@ -192,15 +201,21 @@ async def sell_work10(message: Message, state: FSMContext):
             shutil.rmtree(folder_path)
 
     else:
-        await message.answer("Ви не надіслали жодного файлу або надіслали групу, потрібно відправляти по 1 файлу, спробуйте знову")
+        if message.text != "Завершити":
+            await message.answer("Ви не надіслали жодного файлу або надіслали групу, потрібно відправляти по 1 файлу, спробуйте знову")
 
+# @router.message(F.text == "/test")
+# async def test1(message: Message, state: FSMContext):
+#     print(getattr(test(),'file2'))
 
 
 @router.message(StateFilter(Sell.end, Sell.file2, Sell.file3, Sell.file4, Sell.file5,
                             Sell.file6, Sell.file7, Sell.file8, Sell.file9, Sell.file10),
                 F.text == "Завершити")
 async def sell_work(message: Message, state: FSMContext):
-    await message.answer('Ваша робота виставлена на продаж, перевырте вкладку мої роботи', reply_markup=kb.buy_sell_kb)
+    await state.clear()
+    await message.answer('Ваша робота виставлена на продаж, перевірте вкладку мої роботи', reply_markup=kb.buy_sell_kb)
+
 
 
 
