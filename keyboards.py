@@ -6,9 +6,25 @@ accept = InlineKeyboardMarkup(inline_keyboard=[
     ])
 
 buy_sell_kb = ReplyKeyboardMarkup( keyboard=[
-    [KeyboardButton(text="Придбати")],[KeyboardButton(text="Продати")]],
+    [KeyboardButton(text="Придбати")],[KeyboardButton(text="Продати")],[KeyboardButton(text = "Мої роботи")]],
     resize_keyboard=True, one_time_keyboard=True)
 
 files_end_kb = ReplyKeyboardMarkup( keyboard=[
     [KeyboardButton(text="Завершити")]],
     resize_keyboard=True, one_time_keyboard=True)
+
+def control_kb(page):
+    
+
+    control = InlineKeyboardMarkup(inline_keyboard=[
+        [
+        InlineKeyboardButton(text='◀️', callback_data = "previous"),
+        InlineKeyboardButton(text=str(page), callback_data="page"),
+        InlineKeyboardButton(text='▶️', callback_data = "next")
+        ]
+        ])
+    return control
+
+delete_kb = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text='🗑️ Видалити роботу', callback_data = "delete")]
+    ])

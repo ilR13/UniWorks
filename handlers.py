@@ -10,10 +10,11 @@ from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.fsm.context import FSMContext
 import keyboards as kb
 from bot import bot
-from db import create_empty_work, create_work, get_work_id, check_hash_file, delete_work,check_image_hash, add_file, test
+
+from db import create_empty_work, create_work, get_work_id, check_hash_file, delete_work,check_image_hash, add_file, db_my_works, get_preview, test
 import os
 
-from db import create_user, accept_terms, accepted_terms
+from db import create_user, accept_terms, accepted_terms, get_files
 
 router =Router()
 
@@ -34,7 +35,7 @@ async def accepted(callback: CallbackQuery):
 
 class Sell (StatesGroup):
     Faculty = State()
-    Specialty = State()
+    Speciality = State()
     Discipline = State()
     Title_work = State()
     Task = State()
@@ -66,20 +67,20 @@ async def sell_work1(message: Message, state: FSMContext):
 @router.message(Sell.Faculty)
 async def sell_work2(message: Message, state: FSMContext):
     await state.update_data(Faculty=message.text)
-    await state.set_state(Sell.Specialty)
+    await state.set_state(Sell.Speciality)
     await message.answer("Вкажіть спеціальність")
 
-@router.message(Sell.Specialty)
+@router.message(Sell.Speciality)
 async def sell_work3(message: Message, state: FSMContext):
-    await state.update_data(Specialty=message.text)
+    await state.update_data(Speciality=message.text)
     await state.set_state(Sell.Discipline)
-    await message.answer("Вкажіть назву роботи")
+    await message.answer("Вкажіть дисципліну")
 
 @router.message(Sell.Discipline)
 async def sell_work4(message: Message, state: FSMContext):
     await state.update_data(Discipline=message.text)
     await state.set_state(Sell.Title_work)
-    await message.answer("Вкажіть дисципліну")
+    await message.answer("Вкажіть назву роботи")
 
 @router.message(Sell.Title_work)
 async def sell_work5(message: Message, state: FSMContext):
@@ -138,7 +139,7 @@ async def sell_work9(message: Message, state: FSMContext):
         if check_image_hash(hash):
             print("Фото прийнято")
         
-            create_work(user_id, data.get("Faculty"), data.get("Specialty"), data.get("Discipline"), data.get("Title_work"), data.get("Task"), data.get("Mark"),
+            create_work(user_id, data.get("Faculty"), data.get("Speciality"), data.get("Discipline"), data.get("Title_work"), data.get("Task"), data.get("Mark"),
                             listing_price, price_with_free)
             
             add_file(user_id, file, "image", hash)
@@ -150,8 +151,9 @@ async def sell_work9(message: Message, state: FSMContext):
 
             await state.clear()
             await message.answer("Таке фото вже існує, спробуйте знову", reply_markup=kb.buy_sell_kb)
-            
-            delete_work(user_id)
+            work_id = get_work_id(user_id)
+        
+            delete_work(work_id)
             
             shutil.rmtree(folder_path)
         
@@ -169,7 +171,7 @@ async def sell_work10(message: Message, state: FSMContext):
         file = await bot.get_file(file_id)
         file_path = file.file_path
         data = await state.get_data()
-        get_work_id(user_id)
+        #get_work_id(user_id)
 
         folder_path = "user_works/" + str(user_id)+"/"+str(get_work_id(user_id)) + "/"
         os.makedirs(folder_path, exist_ok=True)
@@ -182,9 +184,9 @@ async def sell_work10(message: Message, state: FSMContext):
         hash = await compute_ssdeep_hash(file)
 
         if check_hash_file(hash):
-            print("Файл прийнято")
+            # print("Файл прийнято")
         
-            #create_work(user_id, data.get("Faculty"), data.get("Specialty"), data.get("Discipline"), data.get("Title_work"), data.get("Task"), data.get("Mark"),listing_price, price_with_fee, file1, hash )
+            #create_work(user_id, data.get("Faculty"), data.get("Speciality"), data.get("Discipline"), data.get("Title_work"), data.get("Task"), data.get("Mark"),listing_price, price_with_fee, file1, hash )
             
             add_file(user_id, file, "document", hash)
 
@@ -196,27 +198,137 @@ async def sell_work10(message: Message, state: FSMContext):
             await state.clear()
             await message.answer("Така робота вже існує, спробуйте знову", reply_markup=kb.buy_sell_kb)
             
-            delete_work(user_id)
+            delete_work(get_work_id(user_id))
             
             shutil.rmtree(folder_path)
 
     else:
         if message.text != "Завершити":
             await message.answer("Ви не надіслали жодного файлу або надіслали групу, потрібно відправляти по 1 файлу, спробуйте знову")
+        else:
+            await state.clear()
+            await message.answer('Ваша робота виставлена на продаж, перевірте вкладку мої роботи', reply_markup=kb.buy_sell_kb)
 
 # @router.message(F.text == "/test")
 # async def test1(message: Message, state: FSMContext):
 #     print(getattr(test(),'file2'))
 
 
-@router.message(StateFilter(Sell.end, Sell.file2, Sell.file3, Sell.file4, Sell.file5,
-                            Sell.file6, Sell.file7, Sell.file8, Sell.file9, Sell.file10),
-                F.text == "Завершити")
-async def sell_work(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer('Ваша робота виставлена на продаж, перевірте вкладку мої роботи', reply_markup=kb.buy_sell_kb)
+# @router.message(StateFilter(Sell.file2), F.text == "Завершити")
+# async def sell_work(message: Message, state: FSMContext):
+#     await state.clear()
+#     await message.answer('Ваша робота виставлена на продаж, перевірте вкладку мої роботи', reply_markup=kb.buy_sell_kb)
+#     print("dimon")
+    
+    
 
 
 
 
 
+class Work(StatesGroup):
+    works = State()
+    select_work = 0
+    page = 0
+    count = 3
+
+@router.message(F.text == "Мої роботи")
+async def my_works(message: Message, state: FSMContext):
+    await state.set_state(Work.works)
+    all_works = db_my_works(message.from_user.id)
+    text = ''
+    print(all_works)
+    page = Work.page
+    count = Work.count
+
+    await state.update_data(works = all_works[page*count: page*count+count])
+    num = 1
+    for work in all_works[page*count: page*count+count]:
+        text+= str(num)+". "+str(work.title_work) +"\n"
+        num+=1
+    
+    await message.answer("Введіть номер роботи для прегеляду")
+    await message.answer(text, reply_markup=kb.control_kb(page) )
+
+@router.callback_query(F.data == "next")
+async def next(callback: CallbackQuery, state: FSMContext):
+    Work.page +=1
+    
+    all_works = db_my_works(callback.from_user.id)
+    text = ''
+    
+    page = Work.page
+    count = Work.count
+    
+    await state.update_data(works = all_works[page*count: page*count+count])
+
+    num = 1
+    for work in all_works[page*count: page*count+count]:
+        text+= str(num)+". "+str(work.title_work) +"\n"
+        num+=1
+    
+
+    if len(text) >0:
+        await callback.message.delete()
+        await callback.message.answer(text, reply_markup=kb.control_kb(page) )
+    else:
+        Work.page -= 1
+
+@router.callback_query(F.data == "previous")
+async def next(callback: CallbackQuery, state: FSMContext):
+    Work.page -=1
+    
+    all_works = db_my_works(callback.from_user.id)
+    text = ''
+    
+    page = Work.page
+    count = Work.count
+    
+    await state.update_data(works = all_works[page*count: page*count+count])
+
+    num = 1
+    for work in all_works[page*count: page*count+count]:
+        text+= str(num)+". "+str(work.title_work) +"\n"
+        num+=1
+    
+
+    if len(text) >0:
+        await callback.message.delete()
+        await callback.message.answer(text, reply_markup=kb.control_kb(page) )
+    else:
+        Work.page += 1
+
+
+@router.message(Work.works)
+async def get_my_work(message: Message, state: FSMContext):
+    try:
+        int(message.text)
+    except:
+        return False
+    
+    data = await state.get_data()
+    work = data.get('works')
+
+    if int(message.text) < 1 or int(message.text)>len(work):
+        return False
+    
+    work = work[int(message.text)-1]
+    Work.select_work = work
+    
+    photo = FSInputFile(get_preview(work.id))
+    text = f"Факультет - {work.faculty}\nСпеціальність - {work.speciality}\nДисципліна - {work.discipline}\nНазва роботи - {work.title_work}\nTask - {work.task}\nОцінка - {work.mark}\nЦіна - {work.listing_price_uah}\nФайли:\n"
+    
+    files = get_files(work.id)
+    for file in files:
+        file = file.file
+        text += "💠"+file[file.rfind('/')+1:]+'\n'
+
+    # file = str(files[0].file)
+    await message.answer_photo(photo, caption=text, reply_markup=kb.delete_kb)
+    # await message.answer(file[file.rfind('/')+1:])
+
+@router.callback_query(F.data == "delete")
+async def delete(callback: CallbackQuery, state: FSMContext):
+    if Work.select_work !=0:
+        delete_work(Work.select_work.id)
+    

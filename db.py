@@ -192,18 +192,30 @@ def check_image_hash(hash1):
                     return False
     return res
     
-
-def delete_work(user_id):
-    work_id = get_work_id(user_id)
+def delete_work(work_id):
+    
     Session = sessionmaker(bind=engine)
     with Session() as session:
-        work = session.query(Works).filter_by(owner_id=user_id).all()[-1]
-        session.delete(work)
-        files =  session.query(Files).filter_by(work_id=work_id).all()
-        for file in files:
-            session.delete(file)
-        #print(files)
-        session.commit()
+        if len(session.query(Works).filter_by(id=work_id).all())>0:
+            work = session.query(Works).filter_by(id=work_id).all()[-1]
+            session.delete(work)
+            files =  session.query(Files).filter_by(work_id=work_id).all()
+            for file in files:
+                session.delete(file)
+            #print(files)
+            session.commit()
+
+# def delete_work(user_id):
+#     work_id = get_work_id(user_id)
+#     Session = sessionmaker(bind=engine)
+#     with Session() as session:
+#         work = session.query(Works).filter_by(owner_id=user_id).all()[-1]
+#         session.delete(work)
+#         files =  session.query(Files).filter_by(work_id=work_id).all()
+#         for file in files:
+#             session.delete(file)
+#         #print(files)
+#         session.commit()
 
 def test():
     return(Works)
@@ -225,6 +237,32 @@ def add_file(user_id, file, file_type, hash):
 #         work = session.query(Works).filter_by(owner_id=user_id).all()[-1]
 #         work.num_file = hash
 
+
+def db_my_works(user_id):
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
+        works = session.query(Works).filter_by(owner_id=user_id).all()
+        # files = []
+        
+        # for work in works:
+        #     files.append(work.title_work)
+        
+        return works
+    
+def get_preview(work_id):
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
+        previous = session.query(Files).filter(Files.work_id == work_id, Files.file_type == "image").first()
+        return previous.file
+    
+def get_files(work_id):
+    Session = sessionmaker(bind=engine)
+    with Session() as session:
+        files = session.query(Files).filter(Files.work_id == work_id, Files.file_type == "document").all()
+        return files
+    
+# def delete_work(work_id):
+#     pass
 # # 4. Создаём таблицы в БД
 # Base.metadata.create_all(engine)
 
